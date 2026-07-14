@@ -3,30 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestión Cloud (Firebase)</title>
-    <!-- Carga de SDKs de Firebase (v10) -->
+    <title>Sistema de Gestión Cloud - Presupuestos</title>
+    
+    <!-- Carga modular de SDKs de Firebase v10 con tus credenciales integradas -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // ⚠️ REEMPLAZA ESTO CON LAS CREDENCIALES DE TU PROYECTO DE FIREBASE
+        // Configuración oficial de tu proyecto "presepuesto"
         const firebaseConfig = {
-            apiKey: "TU_API_KEY",
-            authDomain: "TU_AUTH_DOMAIN",
-            projectId: "TU_PROJECT_ID",
-            storageBucket: "TU_STORAGE_BUCKET",
-            messagingSenderId: "TU_MESSAGING_SENDER_ID",
-            appId: "TU_APP_ID"
+            apiKey: "AIzaSyB2dhvWLqWsOeKRWjAR7siyvrF3OyN_HJ8",
+            authDomain: "presepuesto.firebaseapp.com",
+            databaseURL: "https://presepuesto-default-rtdb.firebaseio.com",
+            projectId: "presepuesto",
+            storageBucket: "presepuesto.firebasestorage.app",
+            messagingSenderId: "633338960620",
+            appId: "1:633338960620:web:63e81563f6ac732b7ea3c9",
+            measurementId: "G-JVRLZKKX0P"
         };
 
-        // Inicializar Firebase
+        // Inicialización de servicios
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // Exportar a la ventana global para que el HTML viejo pueda usarlos
+        // Exponer al entorno global de la ventana para mantener compatibilidad con las funciones HTML
         window.authFirebase = auth;
         window.dbFirebase = db;
         window.providerGoogle = provider;
@@ -58,7 +61,6 @@
             padding: 20px;
         }
 
-        /* Pantalla de Login */
         #login-screen {
             display: flex;
             flex-direction: column;
@@ -96,7 +98,6 @@
         }
         .btn-google:hover { background: #f8fafc; }
 
-        /* Contenedor Principal */
         .container {
             max-width: 1100px;
             margin: 0 auto;
@@ -105,7 +106,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
             position: relative;
-            display: none; /* Se muestra tras el login */
+            display: none; 
         }
 
         .app-header {
@@ -117,45 +118,11 @@
             margin-bottom: 20px;
         }
 
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-avatar {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-        }
-
-        .config-btn {
-            background: #f1f5f9;
-            border: 1px solid var(--border);
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 20px;
-        }
-
+        .user-profile { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 35px; height: 35px; border-radius: 50%; }
+        .config-btn { background: #f1f5f9; border: 1px solid var(--border); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 20px; }
         .tabs { display: flex; gap: 10px; }
-
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            background: #f1f5f9;
-            font-size: 15px;
-            font-weight: 600;
-            color: #64748b;
-            cursor: pointer;
-            border-radius: 6px;
-        }
-
+        .tab-btn { padding: 10px 20px; border: none; background: #f1f5f9; font-size: 15px; font-weight: 600; color: #64748b; cursor: pointer; border-radius: 6px; }
         .tab-btn.active { background: var(--primary); color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -169,19 +136,13 @@
         button { background-color: var(--primary); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
         .btn-danger { background-color: var(--danger); }
         .btn-success { background-color: var(--success); }
-
         .search-container { position: relative; }
-        .search-results {
-            position: absolute; top: 100%; left: 0; right: 0; background: white;
-            border: 1px solid var(--border); max-height: 200px; overflow-y: auto; z-index: 10;
-        }
+        .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); max-height: 200px; overflow-y: auto; z-index: 10; }
         .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .search-item:hover { background-color: #f1f5f9; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background-color: #f1f5f9; }
-
         .totales-box { float: right; width: 300px; margin-top: 20px; background: #f1f5f9; padding: 15px; border-radius: 8px; }
         .totales-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
         .totales-row.grand-total { font-weight: bold; font-size: 18px; border-top: 1px solid #cbd5e1; padding-top: 8px; color: var(--primary); }
@@ -201,19 +162,19 @@
 </head>
 <body>
 
-<!-- PANTALLA DE LOGUEO -->
+<!-- PANTALLA DE INICIO DE SESIÓN -->
 <div id="login-screen">
     <div class="login-card">
-        <h2>Bienvenido al Sistema</h2>
-        <p style="color: #64748b;">Inicia sesión con tu cuenta de Google para acceder de forma segura a tus presupuestos, inventario y clientes.</p>
+        <h2>🔒 Panel Corporativo Privado</h2>
+        <p style="color: #64748b;">Inicia sesión con tu cuenta de Google. Tu información (inventario, clientes y configuración) es 100% confidencial y protegida.</p>
         <button class="btn-google" onclick="loginConGoogle()">
-            <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/web-24dp/logo_googleg_color_24dp.png" alt="Google">
-            Entrar con Google
+            <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/web-24dp/logo_googleg_color_24dp.png" alt="Google" width="20">
+            Ingresar con Google
         </button>
     </div>
 </div>
 
-<!-- CONTENEDOR PRINCIPAL DE LA APLICACIÓN -->
+<!-- CONTENEDOR PRINCIPAL -->
 <div class="container" id="app-container">
     <div class="app-header no-print">
         <div class="tabs">
@@ -223,15 +184,14 @@
         </div>
         <div class="user-profile">
             <button class="config-btn" title="Configuración de la Empresa" onclick="switchTab('configuracion')">⚙️</button>
-            <img id="user-photo" class="user-avatar" src="" alt="Avatar">
-            <button class="btn-danger" style="padding: 5px 10px; font-size:13px;" onclick="cerrarSesion()">Salir</button>
+            <img id="user-photo" class="user-avatar" src="" alt="User Avatar">
+            <button class="btn-danger" style="padding: 5px 10px; font-size:13px;" onclick="cerrarSesion()">Cerrar Sesión</button>
         </div>
     </div>
 
     <!-- PESTAÑA: PRESUPUESTO -->
     <div id="tab-presupuesto" class="tab-content active">
         <h2 class="no-print">Generar Presupuesto</h2>
-        
         <div class="no-print" style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <div class="form-group search-container">
                 <label style="font-weight: bold;">🔍 Buscar / Seleccionar Cliente:</label>
@@ -293,24 +253,13 @@
                         Configure los términos de garantía en el panel de configuración corporativa.
                     </p>
                 </div>
-
                 <div class="totales-box">
-                    <div class="totales-row">
-                        <span>Subtotal:</span>
-                        <span id="val-subtotal">$0</span>
-                    </div>
-                    <div class="totales-row">
-                        <span>IVA (19%):</span>
-                        <span id="val-iva">$0</span>
-                    </div>
-                    <div class="totales-row grand-total">
-                        <span>Total General:</span>
-                        <span id="val-total">$0</span>
-                    </div>
+                    <div class="totales-row"><span>Subtotal:</span><span id="val-subtotal">$0</span></div>
+                    <div class="totales-row"><span>IVA (19%):</span><span id="val-iva">$0</span></div>
+                    <div class="totales-row grand-total"><span>Total General:</span><span id="val-total">$0</span></div>
                 </div>
             </div>
         </div>
-
         <div class="no-print" style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px;">
             <button class="btn-success" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
         </div>
@@ -331,18 +280,10 @@
             <div class="form-group"><label>Email</label><input type="email" id="cli-email" required></div>
             <button type="submit">💾 Registrar Cliente</button>
         </form>
-
         <h3 style="margin-top: 30px;">Clientes Registrados</h3>
         <table id="tabla-clientes-registrados">
             <thead>
-                <tr>
-                    <th>NIT</th>
-                    <th>Nombre</th>
-                    <th>Ciudad</th>
-                    <th>Teléfono</th>
-                    <th>Email</th>
-                    <th>Acción</th>
-                </tr>
+                <tr><th>NIT</th><th>Nombre</th><th>Ciudad</th><th>Teléfono</th><th>Email</th><th>Acción</th></tr>
             </thead>
             <tbody></tbody>
         </table>
@@ -359,16 +300,10 @@
             </div>
             <button type="submit" class="btn-success">📦 Añadir al Inventario</button>
         </form>
-
         <h3 style="margin-top: 30px;">Lista de Artículos en Inventario</h3>
         <table id="tabla-inventario-completo">
             <thead>
-                <tr>
-                    <th>Código EAN</th>
-                    <th>Descripción</th>
-                    <th style="text-align: right;">Precio base</th>
-                    <th style="text-align: center; width: 100px;">Acción</th>
-                </tr>
+                <tr><th>Código EAN</th><th>Descripción</th><th style="text-align: right;">Precio base</th><th style="text-align: center; width: 100px;">Acción</th></tr>
             </thead>
             <tbody></tbody>
         </table>
@@ -381,9 +316,7 @@
             <div class="form-group">
                 <label>Logo de la Empresa</label>
                 <input type="file" id="emp-logo-file" accept="image/*" onchange="procesarLogo(this)">
-                <div style="margin-top: 10px;">
-                    <img id="logo-preview-img" class="logo-preview" src="" alt="Vista previa" style="display:none;">
-                </div>
+                <div style="margin-top: 10px;"><img id="logo-preview-img" class="logo-preview" src="" alt="Vista previa" style="display:none;"></div>
             </div>
             <div class="grid-2">
                 <div class="form-group"><label>NIT de la Empresa</label><input type="text" id="emp-nit" required></div>
@@ -394,17 +327,13 @@
                 <div class="form-group"><label>Teléfono</label><input type="tel" id="emp-telefono" required></div>
             </div>
             <div class="form-group"><label>Email de la Empresa</label><input type="email" id="emp-email" required></div>
-            <div class="form-group">
-                <label>Notas de Garantía y Condiciones</label>
-                <textarea id="emp-notas" rows="5"></textarea>
-            </div>
+            <div class="form-group"><label>Notas de Garantía y Condiciones</label><textarea id="emp-notas" rows="5"></textarea></div>
             <button type="submit">💾 Guardar Configuración</button>
         </form>
     </div>
 </div>
 
 <script>
-    // Variables globales en memoria de la App
     let usuarioActual = null;
     let clientes = [];
     let inventario = [];
@@ -414,7 +343,7 @@
 
     const formatoMoneda = (valor) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor);
 
-    // --- MANEJO DE SESIÓN Y ATADURA A FIREBASE ---
+    // Escuchador de Autenticación Central con Retardo Breve para Esperar la Inicialización
     setTimeout(() => {
         window.onAuthStateChanged(window.authFirebase, async (user) => {
             if (user) {
@@ -422,8 +351,6 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-container').style.display = 'block';
                 document.getElementById('user-photo').src = user.photoURL || 'https://via.placeholder.com/35';
-                
-                // Cargar datos exclusivos del usuario de la nube
                 await cargarDatosDeFirebase();
             } else {
                 usuarioActual = null;
@@ -431,28 +358,27 @@
                 document.getElementById('app-container').style.display = 'none';
             }
         });
-    }, 1000);
+    }, 800);
 
     async function loginConGoogle() {
         try {
             await window.signInWithPopup(window.authFirebase, window.providerGoogle);
-        } catch (error) {
-            console.error("Error en login:", error);
-            alert("No se pudo iniciar sesión con Google.");
+        } catch (e) {
+            console.error(e);
+            alert("Error al autenticar con Google.");
         }
     }
 
     async function cerrarSesion() {
-        if(confirm("¿Cerrar sesión?")) {
+        if (confirm("¿Seguro que deseas salir de la aplicación?")) {
             await window.signOut(window.authFirebase);
             location.reload();
         }
     }
 
-    // --- CONSULTAS Y PERSISTENCIA CLOUD (FIRESTORE) ---
+    // Persistencia aislada por UID del usuario en Firestore Cloud
     async function sincronizarConFirebase(coleccion, datos) {
         if (!usuarioActual) return;
-        // Se guarda en la ruta /usuarios/{UID del usuario}/{coleccion}/data
         const docRef = window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, coleccion, "lista");
         await window.setDocRef(docRef, { datos: datos });
     }
@@ -460,19 +386,15 @@
     async function cargarDatosDeFirebase() {
         if (!usuarioActual) return;
         
-        // 1. Cargar Clientes
         const cliSnap = await window.getDocRef(window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, "clientes", "lista"));
         clientes = cliSnap.exists() ? cliSnap.data().datos : [];
 
-        // 2. Cargar Inventario
         const invSnap = await window.getDocRef(window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, "inventario", "lista"));
         inventario = invSnap.exists() ? invSnap.data().datos : [];
 
-        // 3. Cargar Empresa
         const empSnap = await window.getDocRef(window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, "empresa", "lista"));
         empresa = empSnap.exists() ? empSnap.data().datos : {};
 
-        // Actualizar vistas
         renderizarTablaClientes();
         renderizarTablaInventario();
         cargarEmpresaForm();
@@ -493,10 +415,9 @@
         if (file) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                const base64Img = e.target.result;
-                document.getElementById('logo-preview-img').src = base64Img;
+                empresa.logoBase64 = e.target.result;
+                document.getElementById('logo-preview-img').src = empresa.logoBase64;
                 document.getElementById('logo-preview-img').style.display = 'block';
-                empresa.logoBase64 = base64Img;
             };
             reader.readAsDataURL(file);
         }
@@ -514,7 +435,7 @@
         empresa.notas = document.getElementById('emp-notas').value;
 
         await sincronizarConFirebase("empresa", empresa);
-        alert('Datos de la empresa sincronizados en la nube.');
+        alert('Configuración corporativa guardada en la nube.');
         switchTab('presupuesto');
     }
 
@@ -554,7 +475,7 @@
     }
 
     async function eliminarCliente(id) {
-        if(confirm('¿Eliminar cliente?')) {
+        if(confirm('¿Eliminar cliente permanentemente?')) {
             clientes = clientes.filter(c => c.id !== id);
             await sincronizarConFirebase("clientes", clientes);
             renderizarTablaClientes();
@@ -580,7 +501,7 @@
             descripcion: document.getElementById('inv-descripcion').value.trim(),
             precio: parseFloat(document.getElementById('inv-precio').value)
         };
-        if(inventario.some(item => item.ean === nuevoArticulo.ean)) return alert('El EAN ya existe.');
+        if(inventario.some(item => item.ean === nuevoArticulo.ean)) return alert('Este código EAN ya está registrado.');
         inventario.push(nuevoArticulo);
         await sincronizarConFirebase("inventario", inventario);
         document.getElementById('form-inventario').reset();
@@ -588,7 +509,7 @@
     }
 
     async function eliminarArticuloInventario(id) {
-        if(confirm('¿Eliminar del inventario?')) {
+        if(confirm('¿Eliminar artículo del inventario?')) {
             inventario = inventario.filter(i => i.id !== id);
             await sincronizarConFirebase("inventario", inventario);
             renderizarTablaInventario();
@@ -606,7 +527,6 @@
         });
     }
 
-    // --- INTERFACES DINÁMICAS (PRESUPUESTADOR) ---
     function filtrarClientesEnVivo(query) {
         const container = document.getElementById('resultados-cliente-search');
         if(!query.trim()) return container.style.display = 'none';
@@ -639,7 +559,7 @@
             div.onclick = () => {
                 const ext = articulosPresupuesto.find(a => a.ean === i.ean);
                 if (ext) ext.cantidad++; 
-                else articulosPresupuesto.push({ ean: i.ean, descripcion: i.descripcion, precio: i.precio, cantidad: 1 });
+                else articulosPresupuesto.push({ ean: i.ean, descripcion: i.descripcion, precio: i.precio, Math: i.precio, cantidad: 1 });
                 document.getElementById('buscar-articulo-input').value = '';
                 container.style.display = 'none';
                 calcularYRenderizarPreciosPresupuesto();
