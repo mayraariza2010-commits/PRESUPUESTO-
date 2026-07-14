@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión Cloud (Firebase)</title>
+    <!-- Carga de SDKs de Firebase (v10) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // ⚠️ REEMPLAZA ESTO CON LAS CREDENCIALES DE TU PROYECTO DE FIREBASE
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY",
+            authDomain: "TU_AUTH_DOMAIN",
+            projectId: "TU_PROJECT_ID",
+            storageBucket: "TU_STORAGE_BUCKET",
+            messagingSenderId: "TU_MESSAGING_SENDER_ID",
+            appId: "TU_APP_ID"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // Exportar a la ventana global para que el HTML viejo pueda usarlos
+        window.authFirebase = auth;
+        window.dbFirebase = db;
+        window.providerGoogle = provider;
+        window.signInWithPopup = signInWithPopup;
+        window.signOut = signOut;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.docRef = doc;
+        window.setDocRef = setDoc;
+        window.getDocRef = getDoc;
+    </script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Pantalla de Login */
+        #login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80vh;
+            text-align: center;
+        }
+
+        .login-card {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .btn-google {
+            background: #fff;
+            color: #757575;
+            border: 1px solid var(--border);
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgb(0 0 0 / 0.05);
+        }
+        .btn-google:hover { background: #f8fafc; }
+
+        /* Contenedor Principal */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            position: relative;
+            display: none; /* Se muestra tras el login */
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+        }
+
+        .config-btn {
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 20px;
+        }
+
+        .tabs { display: flex; gap: 10px; }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #f1f5f9;
+            font-size: 15px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
+        .input-table { padding: 5px; width: 80px; text-align: center; }
+        .input-price-table { padding: 5px; width: 120px; text-align: right; }
+        button { background-color: var(--primary); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn-danger { background-color: var(--danger); }
+        .btn-success { background-color: var(--success); }
+
+        .search-container { position: relative; }
+        .search-results {
+            position: absolute; top: 100%; left: 0; right: 0; background: white;
+            border: 1px solid var(--border); max-height: 200px; overflow-y: auto; z-index: 10;
+        }
+        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .search-item:hover { background-color: #f1f5f9; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background-color: #f1f5f9; }
+
+        .totales-box { float: right; width: 300px; margin-top: 20px; background: #f1f5f9; padding: 15px; border-radius: 8px; }
+        .totales-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .totales-row.grand-total { font-weight: bold; font-size: 18px; border-top: 1px solid #cbd5e1; padding-top: 8px; color: var(--primary); }
+        .clearfix::after { content: ""; clear: both; display: table; }
+        .preview-header { border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
+        .logo-preview { max-height: 80px; max-width: 180px; object-fit: contain; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
+            .tabs, button, .no-print, form, .app-header, .search-container, .action-header, .action-cell { display: none !important; }
+            .tab-content { display: none !important; }
+            #tab-presupuesto { display: block !important; }
+            .totales-box { width: 40%; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGUEO -->
+<div id="login-screen">
+    <div class="login-card">
+        <h2>Bienvenido al Sistema</h2>
+        <p style="color: #64748b;">Inicia sesión con tu cuenta de Google para acceder de forma segura a tus presupuestos, inventario y clientes.</p>
+        <button class="btn-google" onclick="loginConGoogle()">
+            <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/web-24dp/logo_googleg_color_24dp.png" alt="Google">
+            Entrar con Google
+        </button>
+    </div>
+</div>
+
+<!-- CONTENEDOR PRINCIPAL DE LA APLICACIÓN -->
+<div class="container" id="app-container">
+    <div class="app-header no-print">
+        <div class="tabs">
+            <button class="tab-btn active" id="btn-presupuesto" onclick="switchTab('presupuesto')">Crear Presupuesto</button>
+            <button class="tab-btn" id="btn-clientes" onclick="switchTab('clientes')">Clientes</button>
+            <button class="tab-btn" id="btn-inventario" onclick="switchTab('inventario')">Inventario</button>
+        </div>
+        <div class="user-profile">
+            <button class="config-btn" title="Configuración de la Empresa" onclick="switchTab('configuracion')">⚙️</button>
+            <img id="user-photo" class="user-avatar" src="" alt="Avatar">
+            <button class="btn-danger" style="padding: 5px 10px; font-size:13px;" onclick="cerrarSesion()">Salir</button>
+        </div>
+    </div>
+
+    <!-- PESTAÑA: PRESUPUESTO -->
+    <div id="tab-presupuesto" class="tab-content active">
+        <h2 class="no-print">Generar Presupuesto</h2>
+        
+        <div class="no-print" style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div class="form-group search-container">
+                <label style="font-weight: bold;">🔍 Buscar / Seleccionar Cliente:</label>
+                <input type="text" id="buscar-cliente-input" placeholder="Escribe NIT o Nombre del cliente..." oninput="filtrarClientesEnVivo(this.value)">
+                <div id="resultados-cliente-search" class="search-results" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div id="documento-presupuesto">
+            <div class="preview-header">
+                <div class="grid-2">
+                    <div>
+                        <div id="print-logo-container"></div>
+                        <h3 id="print-empresa-nombre" style="margin: 5px 0;">Nombre de la Empresa</h3>
+                        <p id="print-empresa-detalles" style="margin: 0; font-size: 13px; color: #475569;">NIT: -<br>Dirección: -</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <h2 style="color: var(--primary); margin-bottom: 5px;">PRESUPUESTO</h2>
+                        <p style="margin: 0;"><strong>Fecha:</strong> <span id="print-fecha">--/--/----</span></p>
+                    </div>
+                </div>
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;">
+                <div class="grid-2">
+                    <div>
+                        <strong>Datos del Cliente:</strong>
+                        <p id="print-cliente-detalles" style="margin: 5px 0; font-size: 14px; line-height: 1.4;">
+                            <em>Ningún cliente seleccionado actualmente. Use el buscador de arriba.</em>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="no-print" style="background: #edf2f7; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                <div class="form-group search-container">
+                    <label>🔍 Buscar Artículo en Inventario (EAN o Descripción):</label>
+                    <input type="text" id="buscar-articulo-input" placeholder="Escribe para buscar..." oninput="filtrarArticulosEnVivo(this.value)">
+                    <div id="resultados-articulo-search" class="search-results" style="display:none;"></div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código EAN</th>
+                        <th>Descripción</th>
+                        <th style="text-align: center; width: 100px;">Cant.</th>
+                        <th style="text-align: right; width: 150px;">Precio Unitario</th>
+                        <th style="text-align: right; width: 150px;">Total</th>
+                        <th class="no-print action-header" style="width: 50px; text-align: center;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-articulos-presupuesto"></tbody>
+            </table>
+
+            <div class="clearfix">
+                <div style="float: left; width: 55%; margin-top: 20px;">
+                    <strong>Notas, Tiempos y Exclusiones de Garantía:</strong>
+                    <p id="print-garantia" style="white-space: pre-line; font-size: 13px; color: #475569; margin-top: 5px; line-height: 1.4;">
+                        Configure los términos de garantía en el panel de configuración corporativa.
+                    </p>
+                </div>
+
+                <div class="totales-box">
+                    <div class="totales-row">
+                        <span>Subtotal:</span>
+                        <span id="val-subtotal">$0</span>
+                    </div>
+                    <div class="totales-row">
+                        <span>IVA (19%):</span>
+                        <span id="val-iva">$0</span>
+                    </div>
+                    <div class="totales-row grand-total">
+                        <span>Total General:</span>
+                        <span id="val-total">$0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="no-print" style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px;">
+            <button class="btn-success" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+        </div>
+    </div>
+
+    <!-- PESTAÑA: CLIENTES -->
+    <div id="tab-clientes" class="tab-content">
+        <h2>Gestión de Clientes</h2>
+        <form id="form-cliente" onsubmit="guardarCliente(event)">
+            <div class="grid-2">
+                <div class="form-group"><label>NIT / Cédula</label><input type="text" id="cli-nit" required></div>
+                <div class="form-group"><label>Nombre Completo</label><input type="text" id="cli-nombre" required></div>
+                <div class="form-group"><label>Dirección</label><input type="text" id="cli-direccion" required></div>
+                <div class="form-group"><label>Código Postal</label><input type="text" id="cli-cp"></div>
+                <div class="form-group"><label>Ciudad</label><input type="text" id="cli-ciudad" required></div>
+                <div class="form-group"><label>Teléfono</label><input type="tel" id="cli-telefono" required></div>
+            </div>
+            <div class="form-group"><label>Email</label><input type="email" id="cli-email" required></div>
+            <button type="submit">💾 Registrar Cliente</button>
+        </form>
+
+        <h3 style="margin-top: 30px;">Clientes Registrados</h3>
+        <table id="tabla-clientes-registrados">
+            <thead>
+                <tr>
+                    <th>NIT</th>
+                    <th>Nombre</th>
+                    <th>Ciudad</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- PESTAÑA: INVENTARIO -->
+    <div id="tab-inventario" class="tab-content">
+        <h2>Inventario de Artículos</h2>
+        <form id="form-inventario" onsubmit="guardarArticuloInventario(event)">
+            <div class="grid-3">
+                <div class="form-group"><label>Código EAN</label><input type="text" id="inv-ean" required></div>
+                <div class="form-group"><label>Descripción del Artículo</label><input type="text" id="inv-descripcion" required></div>
+                <div class="form-group"><label>Precio de Venta</label><input type="number" id="inv-precio" min="0" required></div>
+            </div>
+            <button type="submit" class="btn-success">📦 Añadir al Inventario</button>
+        </form>
+
+        <h3 style="margin-top: 30px;">Lista de Artículos en Inventario</h3>
+        <table id="tabla-inventario-completo">
+            <thead>
+                <tr>
+                    <th>Código EAN</th>
+                    <th>Descripción</th>
+                    <th style="text-align: right;">Precio base</th>
+                    <th style="text-align: center; width: 100px;">Acción</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- PESTAÑA: CONFIGURACIÓN -->
+    <div id="tab-configuracion" class="tab-content">
+        <h2>⚙️ Configuración Corporativa de la Empresa</h2>
+        <form id="form-empresa" onsubmit="guardarEmpresa(event)">
+            <div class="form-group">
+                <label>Logo de la Empresa</label>
+                <input type="file" id="emp-logo-file" accept="image/*" onchange="procesarLogo(this)">
+                <div style="margin-top: 10px;">
+                    <img id="logo-preview-img" class="logo-preview" src="" alt="Vista previa" style="display:none;">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label>NIT de la Empresa</label><input type="text" id="emp-nit" required></div>
+                <div class="form-group"><label>Nombre Comercial</label><input type="text" id="emp-nombre" required></div>
+                <div class="form-group"><label>Dirección</label><input type="text" id="emp-direccion" required></div>
+                <div class="form-group"><label>Código Postal</label><input type="text" id="emp-cp"></div>
+                <div class="form-group"><label>Ciudad</label><input type="text" id="emp-ciudad" required></div>
+                <div class="form-group"><label>Teléfono</label><input type="tel" id="emp-telefono" required></div>
+            </div>
+            <div class="form-group"><label>Email de la Empresa</label><input type="email" id="emp-email" required></div>
+            <div class="form-group">
+                <label>Notas de Garantía y Condiciones</label>
+                <textarea id="emp-notas" rows="5"></textarea>
+            </div>
+            <button type="submit">💾 Guardar Configuración</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Variables globales en memoria de la App
+    let usuarioActual = null;
+    let clientes = [];
+    let inventario = [];
+    let empresa = {};
+    let clienteSeleccionado = null;
+    let articulosPresupuesto = [];
+
+    const formatoMoneda = (valor) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor);
+
+    // --- MANEJO DE SESIÓN Y ATADURA A FIREBASE ---
+    setTimeout(() => {
+        window.onAuthStateChanged(window.authFirebase, async (user) => {
+            if (user) {
+                usuarioActual = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'block';
+                document.getElementById('user-photo').src = user.photoURL || 'https://via.placeholder.com/35';
+                
+                // Cargar datos exclusivos del usuario de la nube
+                await cargarDatosDeFirebase();
+            } else {
+                usuarioActual = null;
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('app-container').style.display = 'none';
+            }
+        });
+    }, 1000);
+
+    async function loginConGoogle() {
+        try {
+            await window.signInWithPopup(window.authFirebase, window.providerGoogle);
+        } catch (error) {
+            console.error("Error en login:", error);
+            alert("No se pudo iniciar sesión con Google.");
+        }
+    }
+
+    async function cerrarSesion() {
+        if(confirm("¿Cerrar sesión?")) {
+            await window.signOut(window.authFirebase);
+            location.reload();
+        }
+    }
+
+    // --- CONSULTAS Y PERSISTENCIA CLOUD (FIRESTORE) ---
+    async function sincronizarConFirebase(coleccion, datos) {
+        if (!usuarioActual) return;
+        // Se guarda en la ruta /usuarios/{UID del usuario}/{coleccion}/data
+        const docRef = window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, coleccion, "lista");
+        await window.setDocRef(docRef, { datos: datos });
+    }
+
+    async function cargarDatosDeFirebase() {
+        if (!usuarioActual) return;
+        
+        // 1. Cargar Clientes
+        const cliSnap = await window.getDocRef(window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, "clientes", "lista"));
+        clientes = cliSnap.exists() ? cliSnap.data().datos : [];
+
+        // 2. Cargar Inventario
+        const invSnap = await window.getDocRef(window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, "inventario", "lista"));
+        inventario = invSnap.exists() ? invSnap.data().datos : [];
+
+        // 3. Cargar Empresa
+        const empSnap = await window.getDocRef(window.docRef(window.dbFirebase, "usuarios", usuarioActual.uid, "empresa", "lista"));
+        empresa = empSnap.exists() ? empSnap.data().datos : {};
+
+        // Actualizar vistas
+        renderizarTablaClientes();
+        renderizarTablaInventario();
+        cargarEmpresaForm();
+        actualizarVistaPresupuesto();
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        const btnActivo = document.getElementById(`btn-${tabId}`);
+        if(btnActivo) btnActivo.classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        if(tabId === 'presupuesto') actualizarVistaPresupuesto();
+    }
+
+    function procesarLogo(input) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Img = e.target.result;
+                document.getElementById('logo-preview-img').src = base64Img;
+                document.getElementById('logo-preview-img').style.display = 'block';
+                empresa.logoBase64 = base64Img;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function guardarEmpresa(e) {
+        e.preventDefault();
+        empresa.nit = document.getElementById('emp-nit').value;
+        empresa.nombre = document.getElementById('emp-nombre').value;
+        empresa.direccion = document.getElementById('emp-direccion').value;
+        empresa.cp = document.getElementById('emp-cp').value;
+        empresa.ciudad = document.getElementById('emp-ciudad').value;
+        empresa.telefono = document.getElementById('emp-telefono').value;
+        empresa.email = document.getElementById('emp-email').value;
+        empresa.notas = document.getElementById('emp-notas').value;
+
+        await sincronizarConFirebase("empresa", empresa);
+        alert('Datos de la empresa sincronizados en la nube.');
+        switchTab('presupuesto');
+    }
+
+    function cargarEmpresaForm() {
+        if(empresa.nit) {
+            document.getElementById('emp-nit').value = empresa.nit;
+            document.getElementById('emp-nombre').value = empresa.nombre;
+            document.getElementById('emp-direccion').value = empresa.direccion;
+            document.getElementById('emp-cp').value = empresa.cp;
+            document.getElementById('emp-ciudad').value = empresa.ciudad;
+            document.getElementById('emp-telefono').value = empresa.telefono;
+            document.getElementById('emp-email').value = empresa.email;
+            document.getElementById('emp-notas').value = empresa.notas || '';
+            if(empresa.logoBase64) {
+                document.getElementById('logo-preview-img').src = empresa.logoBase64;
+                document.getElementById('logo-preview-img').style.display = 'block';
+            }
+        }
+    }
+
+    async function guardarCliente(e) {
+        e.preventDefault();
+        const nuevoCliente = {
+            id: Date.now(),
+            nit: document.getElementById('cli-nit').value,
+            nombre: document.getElementById('cli-nombre').value,
+            direccion: document.getElementById('cli-direccion').value,
+            cp: document.getElementById('cli-cp').value,
+            ciudad: document.getElementById('cli-ciudad').value,
+            telefono: document.getElementById('cli-telefono').value,
+            email: document.getElementById('cli-email').value
+        };
+        clientes.push(nuevoCliente);
+        await sincronizarConFirebase("clientes", clientes);
+        document.getElementById('form-cliente').reset();
+        renderizarTablaClientes();
+    }
+
+    async function eliminarCliente(id) {
+        if(confirm('¿Eliminar cliente?')) {
+            clientes = clientes.filter(c => c.id !== id);
+            await sincronizarConFirebase("clientes", clientes);
+            renderizarTablaClientes();
+        }
+    }
+
+    function renderizarTablaClientes() {
+        const tbody = document.querySelector('#tabla-clientes-registrados tbody');
+        tbody.innerHTML = '';
+        clientes.forEach(c => {
+            tbody.innerHTML += `<tr>
+                <td>${c.nit}</td><td><strong>${c.nombre}</strong></td><td>${c.ciudad}</td><td>${c.telefono}</td><td>${c.email}</td>
+                <td><button class="btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="eliminarCliente(${c.id})">Eliminar</button></td>
+            </tr>`;
+        });
+    }
+
+    async function guardarArticuloInventario(e) {
+        e.preventDefault();
+        const nuevoArticulo = {
+            id: Date.now(),
+            ean: document.getElementById('inv-ean').value.trim(),
+            descripcion: document.getElementById('inv-descripcion').value.trim(),
+            precio: parseFloat(document.getElementById('inv-precio').value)
+        };
+        if(inventario.some(item => item.ean === nuevoArticulo.ean)) return alert('El EAN ya existe.');
+        inventario.push(nuevoArticulo);
+        await sincronizarConFirebase("inventario", inventario);
+        document.getElementById('form-inventario').reset();
+        renderizarTablaInventario();
+    }
+
+    async function eliminarArticuloInventario(id) {
+        if(confirm('¿Eliminar del inventario?')) {
+            inventario = inventario.filter(i => i.id !== id);
+            await sincronizarConFirebase("inventario", inventario);
+            renderizarTablaInventario();
+        }
+    }
+
+    function renderizarTablaInventario() {
+        const tbody = document.querySelector('#tabla-inventario-completo tbody');
+        tbody.innerHTML = '';
+        inventario.forEach(i => {
+            tbody.innerHTML += `<tr>
+                <td><code>${i.ean}</code></td><td>${i.descripcion}</td><td style="text-align: right;"><strong>${formatoMoneda(i.precio)}</strong></td>
+                <td style="text-align: center;"><button class="btn-danger" style="padding: 5px 10px; font-size:12px;" onclick="eliminarArticuloInventario(${i.id})">Eliminar</button></td>
+            </tr>`;
+        });
+    }
+
+    // --- INTERFACES DINÁMICAS (PRESUPUESTADOR) ---
+    function filtrarClientesEnVivo(query) {
+        const container = document.getElementById('resultados-cliente-search');
+        if(!query.trim()) return container.style.display = 'none';
+        const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(query.toLowerCase()) || c.nit.includes(query));
+        container.innerHTML = '';
+        filtrados.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'search-item';
+            div.innerHTML = `<strong>${c.nombre}</strong> <small>(NIT: ${c.nit})</small>`;
+            div.onclick = () => {
+                clienteSeleccionado = c;
+                document.getElementById('buscar-cliente-input').value = c.nombre;
+                container.style.display = 'none';
+                actualizarVistaPresupuesto();
+            };
+            container.appendChild(div);
+        });
+        container.style.display = 'block';
+    }
+
+    function filtrarArticulosEnVivo(query) {
+        const container = document.getElementById('resultados-articulo-search');
+        if(!query.trim()) return container.style.display = 'none';
+        const filtrados = inventario.filter(i => i.descripcion.toLowerCase().includes(query.toLowerCase()) || i.ean.includes(query));
+        container.innerHTML = '';
+        filtrados.forEach(i => {
+            const div = document.createElement('div');
+            div.className = 'search-item';
+            div.innerHTML = `📦 <code>${i.ean}</code> - ${i.descripcion} | <strong>${formatoMoneda(i.precio)}</strong>`;
+            div.onclick = () => {
+                const ext = articulosPresupuesto.find(a => a.ean === i.ean);
+                if (ext) ext.cantidad++; 
+                else articulosPresupuesto.push({ ean: i.ean, descripcion: i.descripcion, precio: i.precio, cantidad: 1 });
+                document.getElementById('buscar-articulo-input').value = '';
+                container.style.display = 'none';
+                calcularYRenderizarPreciosPresupuesto();
+            };
+            container.appendChild(div);
+        });
+        container.style.display = 'block';
+    }
+
+    function cambiarCantidad(ean, cant) {
+        const item = articulosPresupuesto.find(a => a.ean === ean);
+        if(item) { item.cantidad = Math.max(1, parseInt(cant) || 1); calcularYRenderizarPreciosPresupuesto(); }
+    }
+
+    function cambiarPrecioPresupuesto(ean, prc) {
+        const item = articulosPresupuesto.find(a => a.ean === ean);
+        if(item) { item.precio = Math.max(0, parseFloat(prc) || 0); calcularYRenderizarPreciosPresupuesto(); }
+    }
+
+    function removerArticuloPresupuesto(ean) {
+        articulosPresupuesto = articulosPresupuesto.filter(a => a.ean !== ean);
+        calcularYRenderizarPreciosPresupuesto();
+    }
+
+    function actualizarVistaPresupuesto() {
+        document.getElementById('print-fecha').innerText = new Date().toLocaleDateString('es-CO');
+        document.getElementById('print-logo-container').innerHTML = empresa.logoBase64 ? `<img class="logo-preview" src="${empresa.logoBase64}">` : '';
+        if(empresa.nombre) {
+            document.getElementById('print-empresa-nombre').innerText = empresa.nombre;
+            document.getElementById('print-empresa-detalles').innerHTML = `NIT: ${empresa.nit}<br>Dirección: ${empresa.direccion}<br>Ciudad: ${empresa.ciudad}<br>Tel: ${empresa.telefono}`;
+            document.getElementById('print-garantia').innerText = empresa.notas || '';
+        }
+        const infoCliente = document.getElementById('print-cliente-detalles');
+        infoCliente.innerHTML = clienteSeleccionado ? `<strong>Razón Social:</strong> ${clienteSeleccionado.nombre}<br><strong>NIT:</strong> ${clienteSeleccionado.nit}<br><strong>Dirección:</strong> ${clienteSeleccionado.direccion}<br><strong>Teléfono:</strong> ${clienteSeleccionado.telefono}` : '<em>Ningún cliente seleccionado.</em>';
+        calcularYRenderizarPreciosPresupuesto();
+    }
+
+    function calcularYRenderizarPreciosPresupuesto() {
+        const tbody = document.getElementById('tabla-articulos-presupuesto');
+        tbody.innerHTML = '';
+        let subtotal = 0;
+        articulosPresupuesto.forEach(a => {
+            const totalFila = a.precio * a.cantidad;
+            subtotal += totalFila;
+            tbody.innerHTML += `<tr>
+                <td><code>${a.ean}</code></td><td>${a.descripcion}</td>
+                <td><input type="number" class="input-table" value="${a.cantidad}" onchange="cambiarCantidad('${a.ean}', this.value)"></td>
+                <td><input type="number" class="input-price-table no-print" value="${a.precio}" onchange="cambiarPrecioPresupuesto('${a.ean}', this.value)"></td>
+                <td style="text-align: right;"><strong>${formatoMoneda(totalFila)}</strong></td>
+                <td class="no-print action-cell" style="text-align: center;"><button class="btn-danger" style="padding: 3px 8px;" onclick="removerArticuloPresupuesto('${a.ean}')">❌</button></td>
+            </tr>`;
+        });
+        const iva = subtotal * 0.19;
+        document.getElementById('val-subtotal').innerText = formatoMoneda(subtotal);
+        document.getElementById('val-iva').innerText = formatoMoneda(iva);
+        document.getElementById('val-total').innerText = formatoMoneda(subtotal + iva);
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+            document.getElementById('resultados-cliente-search').style.display = 'none';
+            document.getElementById('resultados-articulo-search').style.display = 'none';
+        }
+    });
+</script>
+</body>
+</html>
